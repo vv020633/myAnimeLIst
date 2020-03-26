@@ -1,41 +1,45 @@
 #! /usr/bin/python3
 
-#Script to search internet for relevant information regarding MyAnimeLists'
-#Top Upcoming Anime
+import json, requests, pprint
+from jikanpy import Jikan
+jikan = Jikan()
+titles = ''
 
-import requests
-from bs4 import BeautifulSoup
-# Create Connection to webpage
-webpage = requests.get('https://myanimelist.net/topanime.php?type=upcoming')
-soup = BeautifulSoup(webpage.content, 'html.parser')
-title_div = soup.find_all(class_='di-ib clearfix')
+top_anime = jikan.top(type='anime', page=1, subtype='upcoming')
 
-def collectTitles(divs):
-    index = 0
-    titles = []
-    for div in divs:
-        title = div.contents[0]
-        titles.append(title)
-        index+=1
-        if index >= 10:
-            break
-        else:
-            continue
-    return titles
+for key,value  in top_anime.items():
+     if key ==  'top':
+        animes_data = value
 
-def titlesToText(title_tag):
-    titles = []
-    for title in title_tag:
-        titles.append(title.get_text())
-    return titles
 
-def topUpcomingMenu(text_titles):
-    index = 0
-    for title in text_titles:
-        menu_number = '[%s] ' % index
-        index+=1
-        print(menu_number + title)
+def jsonToMenu():
+    title = ''
+    rank = ''
+    start_date = ''
+    for data in animes_data:
+        for key, value in data:
 
-titles = collectTitles(title_div)
-text_titles = titlesToText(titles)
-topUpcomingMenu(text_titles)
+            if key == 'rank':
+                rank = value
+            if key == 'title':
+                title = value
+            if key == 'start_date':
+                start_date = value
+
+def mainMenu():
+    print("Hello. Please select 1 to view upcoming anime.")
+    try:
+        menu_option = int(input())
+
+    except ValueError:
+        try:
+            float(num)
+            print('Input is a float. Please select a menu option.')
+
+        except ValueError:
+            print('That was not a number. Please enter a valid number')
+
+
+
+# pprint.pprint(titles)
+
