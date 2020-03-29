@@ -123,10 +123,6 @@ def upcomingMenuPrint(titles, ranks, start_dates):
     print("Press 'B' to go back...")
     user_input = input()
     return user_input
-# titleSelect(titles, ranks, user_input)
-# Run title select function here
-# If value is found then break and clear Screen
-# If value is not found, then keep printing to the screen
 
 
 # Grabbing the top upcoming anime from the MAL API
