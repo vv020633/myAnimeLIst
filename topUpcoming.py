@@ -65,7 +65,7 @@ def mainMenu():
                 upcomingMenu(titles, ranks, start_dates)
                 break
             elif menu_option == 2:
-                jsonToGenreMenu()
+                genreMenu()
                 break
         except ValueError:
             print("Error")
@@ -74,9 +74,12 @@ def mainMenu():
             time.sleep(2)
 
 
+# def genreTitleSelect():
+#     while True:
+
 
 # Selects one of the upcoming anime titles
-def titleSelect(titles, ranks, user_input):
+def upcomingTitleSelect(titles, ranks, user_input):
     # Searches for the selected title on reddit using our search token
     def redditSearch(search_token):
         search_link = f'https://www.reddit.com/r/anime/search/?q={search_token}&restrict_sr=1'
@@ -150,6 +153,47 @@ def titleSelect(titles, ranks, user_input):
         time.sleep(5)
         upcomingMenu(titles, ranks, start_dates)
 
+def genreMenu():
+
+    genre_dict = {'1': 'Action', '2':'Adventure', '3':'Cars', '4':'Comedy', '5':'Dementia', '6':'Demons', '7': 'Mystery', '8':'Drama', '9':'Ecchi',
+        '10':'Fantasy', '11':'Game', '12':'Hentai', '13':'Historical', '14':'Horror', '15':'Kids', '16':'Magic', '17':'Martial Arts',
+        '18':'Mecha', '19':'Music', '20':'Parody', '21':'Samurai', '22':'Romance', '23': 'School', '24':'Sci Fi', '25': 'Shoujo',
+        '26':'Shoujo Ai', '27':'Shounen', '28':'Shounen Ai', '29': 'Space', '30':'Sports', '31':'Super Power', '32':'Vampire', '33':'Yaoi',
+        '34':'Yuri', '35':'Harem', '36':'Slice Of Life', '37':'Supernatural', '38':'Military', '39':'Police', '40':'Psychological', '41':'Thriller',
+        '42':'Seinen', '43':'Josei'}
+    def genrePrintMenu():
+
+        print('Genres to choose from include:')
+        for number, genre in genre_dict.items():
+            print(f'[{number}]:-> {genre}')
+
+
+    while True:
+    #Clear screen
+        os.system('cls' if os.name == 'nt' else 'clear')
+        genrePrintMenu()
+        user_input = input()
+        for number, genre in genre_dict.items():
+            try:
+                if user_input is number:
+                    print(genre)
+                    break
+
+                else:
+                    continue
+            except ValueError:
+                print('ValueError: Please pick an Integer value from the list above')
+                os.system('cls' if os.name == 'nt' else 'clear')
+                time.sleep(1)
+                print('**************Invalid selection**************')
+                time.sleep(1)
+                genrePrintMenu()
+        break
+
+
+
+
+
 def upcomingMenu(titles, ranks, start_dates):
 # assigns the max width of the columns for each value
     max_length_titles = max(titles, key = len)
@@ -171,7 +215,7 @@ def upcomingMenu(titles, ranks, start_dates):
     time.sleep(.2)
     print("Press 'B' to go back...")
     user_input = input()
-    titleSelect(titles, ranks, user_input)
+    upcomingTitleSelect(titles, ranks, user_input)
 
 
 
