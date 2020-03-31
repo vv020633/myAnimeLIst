@@ -62,7 +62,7 @@ def mainMenu():
         #Clear terminal command for Windows, Unix and MAC
         os.system('cls' if os.name == 'nt' else 'clear')
         print('[1]View Top Upcoming Anime.'.center(20) + '\n ' )
-        print('[2]Select Anime to Watch by Genre.'.center(20) + '\n ' )
+        print('[2]Select Random Anime To Watch.'.center(20) + '\n ' )
 #If the user's input isn't an integer then it raises an exception
         menu_option = input('->')
         try:
@@ -72,7 +72,7 @@ def mainMenu():
                 upcomingMenu(titles, ranks, start_dates)
                 main_loop = False
             elif int(menu_option) == 2:
-                genreMenu()
+                randMenu()
                 main_loop = False
 
             else:
@@ -88,6 +88,22 @@ def mainMenu():
             print("Please enter a valid option...")
             time.sleep(2)
 
+def randMenu():
+    print('How would you like to randomly select an anime?')
+    print('[1] Genre')
+    print('\n' + '\n' + "Press 'B' to go back")
+    user_input = input('->')
+
+    try:
+        if int(user_input()) == 1:
+            genreMenu()
+    elif user_input.upper = 'B':
+        mainMenu()
+
+    except ValueError:
+        print('**************Invalid selection**************')
+        time.sleep(1)
+        print('Input a valid selection')
 
 # Selects one of the upcoming anime titles
 def upcomingTitleSelect(titles, ranks, user_input):
@@ -173,7 +189,7 @@ def genreMenu():
         '34':'Yuri', '35':'Harem', '36':'Slice Of Life', '37':'Supernatural', '38':'Military', '39':'Police', '40':'Psychological', '41':'Thriller',
         '42':'Seinen', '43':'Josei'}
     def genrePrintMenu():
-
+        os.system('cls' if os.name == 'nt' else 'clear')
         print('Genres to choose from include:')
         for number, genre in genre_dict.items():
             print(f'[{number}]:-> {genre}')
@@ -196,7 +212,6 @@ def genreMenu():
                         continue
                 except ValueError:
                     print('ValueError: Please pick an Integer value from the list above')
-                    os.system('cls' if os.name == 'nt' else 'clear')
                     time.sleep(1)
                     print('**************Invalid selection**************')
                     time.sleep(1)
@@ -227,8 +242,6 @@ def genreMenu():
     genrePrintMenu()
     genre_json = chooseGenre()
     findGenre(genre_json)
-
-
 
 def upcomingMenu(titles, ranks, start_dates):
 # assigns the max width of the columns for each value
