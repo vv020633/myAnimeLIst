@@ -2,17 +2,24 @@
 
 import json, requests, pprint, os, time, math, webbrowser, re, pyautogui
 from jikanpy import Jikan
+from random import randint
 jikan = Jikan()
 
-def jsonToGenreMenu():
+def jsonToGenreMenu(genre_id):
+
+    genre_id = int(genre_id)
     try:
         # Grabbing the top upcoming anime from the MAL API
-        anime_genre = jikan.genre(type='anime', genre_id=1)
+        anime_genre = jikan.genre(type='anime', genre_id=genre_id)
+        return anime_genre
 
     except ConnectionError:
         print('Could not connect to the MAL API at: https://api.jikan.moe/v3')
 
-    pprint.pprint(anime_genre)
+    except ValueError:
+        print('Expected an integer between one and two digits')
+
+    # pprint.pprint(anime_genre)
 
 # Loops through the retrieved Json values and pulls the 'top' dictionary item from the dictionary which contains a list of animes as it's value
 def jsonToUpcomingMenu():
@@ -50,32 +57,36 @@ def jsonToUpcomingMenu():
 
 #Initates the main menu
 def mainMenu():
-
-    while True:
+    main_loop = True
+    while main_loop:
         #Clear terminal command for Windows, Unix and MAC
         os.system('cls' if os.name == 'nt' else 'clear')
         print('[1]View Top Upcoming Anime.'.center(20) + '\n ' )
         print('[2]Select Anime to Watch by Genre.'.center(20) + '\n ' )
 #If the user's input isn't an integer then it raises an exception
+        menu_option = input('->')
         try:
-            menu_option = int(input())
-            if menu_option == 1:
+            if int(menu_option) == 1:
 
                 titles, ranks, start_dates = jsonToUpcomingMenu()
                 upcomingMenu(titles, ranks, start_dates)
-                break
-            elif menu_option == 2:
+                main_loop = False
+            elif int(menu_option) == 2:
                 genreMenu()
-                break
+                main_loop = False
+
+            else:
+                time.sleep(1)
+                print('**************Invalid selection**************')
+                time.sleep(1)
+                continue
+
         except ValueError:
-            print("Error")
-            time.sleep(1)
-            print("Please enter a digit...")
+            print('**************Invalid selection**************')
+            time.sleep(.2)
+            print('ValueError')
+            print("Please enter a valid option...")
             time.sleep(2)
-
-
-# def genreTitleSelect():
-#     while True:
 
 
 # Selects one of the upcoming anime titles
@@ -111,8 +122,8 @@ def upcomingTitleSelect(titles, ranks, user_input):
     #Clear terminal command for Windows, Unix and MAC
     os.system('cls' if os.name == 'nt' else 'clear')
 
-
-    while True:
+    search_loop = True
+    while search_loop:
         for rank in ranks:
             # If user input is a digit
             if user_input.isdigit():
@@ -132,22 +143,22 @@ def upcomingTitleSelect(titles, ranks, user_input):
                         wikipediaSearch(wikipedia_search_token)
                         youtubeSearch(youtube_search_token)
 
-                        break
+                        search_loop = False
                     else:
                         redditSearch(search_string)
                         wikipediaSearch(search_string)
                         youtubeSearch(search_string)
-                        break
+                        search_loop = False
                 else:
                     continue
             # Go back if the user's selection is 'B'
             elif str(user_input).upper() == 'B':
-                        mainMenu(titles, ranks, start_dates)
+                        mainMenu()
 
             else:
                 continue
 
-        break
+        search_loop = False
         time.sleep(1)
         print('**************Invalid selection**************')
         time.sleep(5)
@@ -167,30 +178,55 @@ def genreMenu():
         for number, genre in genre_dict.items():
             print(f'[{number}]:-> {genre}')
 
+    def chooseGenre():
 
-    while True:
+        genre_loop = True
+        while genre_loop:
     #Clear screen
-        os.system('cls' if os.name == 'nt' else 'clear')
-        genrePrintMenu()
-        user_input = input()
-        for number, genre in genre_dict.items():
-            try:
-                if user_input is number:
-                    print(genre)
-                    break
+            # os.system('cls' if os.name == 'nt' else 'clear')
+            user_input = input('->')
+            for number, genre in genre_dict.items():
+                try:
+                    if user_input == number:
+                        genre_json= jsonToGenreMenu(user_input)
+                        return genre_json
+                        genre_loop = False
 
-                else:
-                    continue
-            except ValueError:
-                print('ValueError: Please pick an Integer value from the list above')
-                os.system('cls' if os.name == 'nt' else 'clear')
-                time.sleep(1)
-                print('**************Invalid selection**************')
-                time.sleep(1)
-                genrePrintMenu()
-        break
+                    else:
+                        continue
+                except ValueError:
+                    print('ValueError: Please pick an Integer value from the list above')
+                    os.system('cls' if os.name == 'nt' else 'clear')
+                    time.sleep(1)
+                    print('**************Invalid selection**************')
+                    time.sleep(1)
+                    genrePrintMenu()
+            genre_loop = False
+
+    def findGenre(genre_dict):
+        genre_list = genre_dict.get('anime')
+
+        rand_select_loop = True
+
+        while rand_select_loop:
+            os.system('cls' if os.name == 'nt' else 'clear')
+            random_selection = randint(0, len(genre_list))
+            random_show = genre_list[random_selection]
+            distinct_random_show = dict((key, random_show[key]) for key in  ['title', 'synopsis', 'score', 'url']
+                                                                                if key in random_show)
+            pprint.pprint(distinct_random_show)
+            print('Search for this title?[Y/N]')
+            user_input = input('->')
+            if user_input.upper() == 'Y':
+                print('Running search')
+                rand_select_loop = False
+            elif user_input.upper() == 'N':
+                continue
 
 
+    genrePrintMenu()
+    genre_json = chooseGenre()
+    findGenre(genre_json)
 
 
 
