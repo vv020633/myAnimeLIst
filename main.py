@@ -1,6 +1,6 @@
 #! /usr/bin/python3
 
-import json, requests, pprint, os, time, math, webbrowser, re, pyautogui, urllib.request
+import json, requests, pprint, os, time, math, webbrowser, re, pyautogui, urllib.request, pyperclip
 from tkinter import *
 from PIL import Image, ImageTk
 from jikanpy import Jikan
@@ -101,27 +101,7 @@ def jsonToUpcomingMenu():
     return titles, ranks, start_dates
 
 #Initates the main menu
-def mainMenu():
-    main_loop = True
-    while main_loop:
-        #Clear terminal command for Windows, Unix and MAC
-        clearScreen()
-        print('[1]View Top Upcoming Anime.'.center(20) + '\n ' )
-        print('[2]Select Random Anime To Watch.'.center(20) + '\n ' )
-#If the user's input isn't an integer then it raises an exception
-        menu_option = input('->')
-        try:
-            #Upcoming Menu Selection
-            if int(menu_option) == 1:
-
-                titles, ranks, start_dates = jsonToUpcomingMenu()
-                upcomingMenu(titles, ranks, start_dates)
-                main_loop = False
-
-            #Genre Menu Selection
-            elif int(menu_option) == 2:
-                randMenu()
-                main_loop = False
+def mainMenu()
 
             else:
                 time.sleep(1)
@@ -136,31 +116,51 @@ def mainMenu():
             print("Please enter a valid option...")
             time.sleep(2)
 
+def completedMenu():
+    def viewCompleted():
+        print('Completed view')
+
+    clearScreen()
+    print('[1]View Completed Series\n')
+    print('[2]Add to Completed Series\n')
+
+
+
 #Menu used to randomly select a show
 def randMenu():
-    clearScreen()
-    print('How would you like to randomly select an anime?')
-    print('[1] Genre')
-    print('\n' + '\n' + "Press 'B' to go back")
-    user_input = input('->')
 
     rand_menu_loop = True
 
     while rand_menu_loop:
+        clearScreen()
+        print('How would you like to randomly select an anime?')
+        print('[1] Genre')
+        print('\n' + '\n' + "Press 'B' to go back")
+        user_input = input('->')
+
         try:
-            #Navigate to genre menu
-            if int(user_input) == 1:
-                genreMenu()
-                rand_menu_loop = False
+
             #Back to main menu
-            elif user_input.upper() == 'B':
+            if user_input.upper() == 'B':
                 mainMenu()
                 rand_menu_loop = False
-        except ValueError:
+                #Navigate to genre menu
+            elif int(user_input) == 1:
+                    genreMenu()
+                    rand_menu_loop = False
+            else :
+                print('Please enter a valid option')
+                time.sleep(3)
+                continue
+        except ValueError as error:
+            print(error)
             print('**************Invalid selection**************')
             time.sleep(1)
             print('Input a valid selection')
-        continue
+            time.sleep(1)
+            rand_menu_loop = False
+            randMenu()
+
 
 # Selects one of the upcoming anime titles
 def upcomingTitleSelect(titles, ranks, user_input):
@@ -274,8 +274,9 @@ def genreMenu():
                         return genre_json
                         genre_loop = False
 
-                    elif user_input == 'B':
+                    elif user_input.upper() == 'B':
                         randMenu()
+
                     else:
                         continue
                 except ValueError:
@@ -284,7 +285,8 @@ def genreMenu():
                     print('**************Invalid selection**************')
                     time.sleep(1)
                     printGenreMenu()
-            genre_loop = False
+                    continue
+
 
     def findGenre(genre_d):
 
@@ -303,31 +305,45 @@ def genreMenu():
 
             pprint.pprint(distinct_random_show)
             print('\n Search for this title?[Y/N]')
+            print('\n Press [B] to go back')
             user_input = input('->')
+            try:
+        #Get the title of the show and pass it to the function to search/stream it
+                if user_input.upper() == 'Y':
+                    search_string = distinct_random_show.get('title', 'none')
+                    response = animeSearch(search_string)
 
-            yes_no_loop = True
+                # If we get a good response, proceed to the site
+                    if response == 200:
+                        webbrowser.Open(search_string)
+                        rand_select_loop = False
 
-            while yes_no_loop:
-                try:
-            #Get the title of the show and pass it to the function to search/stream it
-                    if user_input.upper() == 'Y':
-                        search_string = distinct_random_show.get('title', 'none')
-                        response = animeSearch(search_string)
+                    else:
+                        print('Sorry for the inconvenience. I am unable to complete your query at this time')
+                        rand_select_loop = False
+                elif user_input.upper() == 'N':
+                    continue
 
-                    # If we get a good response, proceed to the site
-                        if response == 200:
-                            webbrowser.Open(search_string)
-                            yes_no_loop = False
-                            rand_select_loop = False
+                elif user_input.upper() == 'B':
+                    rand_select_loop = False
+                    printGenreMenu()
 
-                        else:
-                            print('Sorry for the inconvenience. I am unable to complete your query at this time')
-                    elif user_input.upper() == 'N':
-                        continue
 
-                except ValueError:
-                    print('Please enter a valid value')
-            continue
+            except ValueError:
+                print('Please enter a valid value')
+                continue
+
+            except urllib.error.HTTPError as exception:
+                print(exception)
+                #Copy the search string to the clipboard
+                user_copy = pyperclip.copy(search_string)
+                time.sleep(1)
+                print('Title was not located on gogoanime....\n')
+                time.sleep(1)
+                print('Alternatively you can search for this title manually. It has been copied to the clipboard\n')
+                time.sleep(3)
+                continue
+
     printGenreMenu()
     genre_json = chooseGenre()
     findGenre(genre_json)
