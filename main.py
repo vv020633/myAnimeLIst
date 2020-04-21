@@ -1,6 +1,6 @@
 #! /usr/bin/python3
 
-import json, requests, pprint, os, time, math, webbrowser, re, pyautogui, urllib.request, pyperclip
+import json, requests, pprint, os, time, math, webbrowser, re, pyautogui, urllib.request, pyperclip, pymongo
 from tkinter import *
 from PIL import Image, ImageTk
 from jikanpy import Jikan
@@ -101,7 +101,33 @@ def jsonToUpcomingMenu():
     return titles, ranks, start_dates
 
 #Initates the main menu
-def mainMenu()
+def mainMenu():
+
+    main_loop = True
+    while main_loop:
+        #Clear terminal command for Windows, Unix and MAC
+        clearScreen()
+        print('[1]View Top Upcoming Anime.'.center(20) + '\n ' )
+        print('[2]Select Random Anime To Watch.'.center(20) + '\n ' )
+        print('[3]Completed Series')
+#If the user's input isn't an integer then it raises an exception
+        menu_option = input('->')
+        try:
+            #Upcoming Menu Selection
+            if int(menu_option) == 1:
+
+                titles, ranks, start_dates = jsonToUpcomingMenu()
+                upcomingMenu(titles, ranks, start_dates)
+                main_loop = False
+
+            #Genre Menu Selection
+            elif int(menu_option) == 2:
+                randMenu()
+                main_loop = False
+
+            elif int(menu_option) == 3:
+                completedMenu()
+                main_loop = False
 
             else:
                 time.sleep(1)
@@ -109,22 +135,64 @@ def mainMenu()
                 time.sleep(1)
                 continue
 
-        except ValueError:
+        except ValueError as error:
             print('**************Invalid selection**************')
             time.sleep(.2)
-            print('ValueError')
+            print(error)
             print("Please enter a valid option...")
             time.sleep(2)
 
 def completedMenu():
-    def viewCompleted():
+    def viewSeries():
         print('Completed view')
 
-    clearScreen()
-    print('[1]View Completed Series\n')
-    print('[2]Add to Completed Series\n')
+    def addSeries():
+        print('Add series that you have completed to this list for later playback')
 
+# Creat connection to our local mongoDB
+    def dbConnect():
+        # Add fail safe to skip over this try catch if the connection is already in place
+        try:
+            myclient = pymongo.MongoClient("mongodb://localhost:27017/")
+            mydb = myclient["Anime_DB"]
+            print('connection successful')
 
+        except ConnectionError as error:
+            print(error)
+
+    completed_menu_loop = True
+    while completed_menu_loop:
+        clearScreen()
+        print('[1]View Completed Series\n')
+        print('[2]Add to Completed Series\n')
+        print('Press [B] to go back')
+
+        user_input = input('->')
+        try:
+            if int(user_input) == 1:
+                viewSeries()
+                dbConnect()
+                completed_menu_loop = False
+
+            elif int(user_input) == 2:
+                addSeries()
+                completed_menu_loop = False
+
+            elif user_input.upper() == 'B':
+                mainMenu()
+                completed_menu_loop = False
+
+            else:
+                time.sleep(1)
+                print('**************Invalid selection**************')
+                time.sleep(1)
+                continue
+
+        except ValueError as error:
+            print('**************Invalid selection**************')
+            time.sleep(.2)
+            print(error)
+            time.sleep(2)
 
 #Menu used to randomly select a show
 def randMenu():
@@ -135,7 +203,7 @@ def randMenu():
         clearScreen()
         print('How would you like to randomly select an anime?')
         print('[1] Genre')
-        print('\n' + '\n' + "Press 'B' to go back")
+        print('\n' + '\n' + "Press [B] to go back")
         user_input = input('->')
 
         try:
@@ -254,7 +322,7 @@ def genreMenu():
         for number, genre in genre_dict.items():
             print(f'[{number}]:-> {genre}')
 
-        print("\n Press 'B' to go back...")
+        print("\n Press [B] to go back...")
 
     #Genre Selection
     def chooseGenre():
@@ -367,7 +435,7 @@ def upcomingMenu(titles, ranks, start_dates):
     time.sleep(.2)
     print('Please input a rank number from the list for more information regarding a chosen title...')
     time.sleep(.2)
-    print("Press 'B' to go back...")
+    print("Press [B] to go back...")
     user_input = input()
     upcomingTitleSelect(titles, ranks, user_input)
 

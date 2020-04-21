@@ -1,2 +1,2 @@
 ******Packages to install******
--PYMongo, the PYthon Driver
+-PYMongo, the PYthon Driver - pip3 install pymongo
