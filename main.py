@@ -153,12 +153,43 @@ def completedMenu():
     def dbConnect():
         # Add fail safe to skip over this try catch if the connection is already in place
         try:
-            myclient = pymongo.MongoClient("mongodb://localhost:27017/")
-            mydb = myclient["Anime_DB"]
+            client = pymongo.MongoClient("mongodb://localhost:27017/")
+            db = client["Anime_DB"]
+            collection = db['completed']
             print('connection successful')
 
         except ConnectionError as error:
             print(error)
+
+    def addSeriesMenu():
+        add_series_loop = True
+        while add_series_loop:
+            clearScreen()
+            user_input = input(f'Please enter a series name to add to your "Watched List" ')
+
+            if user_input.upper() == 'B':
+                completedMenu()
+                add_series_loop = False
+            else:
+                clearScreen()
+                print(f'You have entered "{user_input}" to add to your collection. Is this correct?')
+                user_input = input('[Y][N]->')
+
+                try:
+                    if user_input.upper() = 'Y':
+                        # Put this value into a dictionary so that it can be used by MongoDB
+                        collection.insert_one(user_input).inserted_id
+                    elif user_input = 'N':
+                        continue
+                    else:
+                        print('**************Invalid selection**************')
+                except ValueError as error:
+                    print('**************Invalid selection**************')
+                    time.sleep(.2)
+                    print(error)
+                    time.sleep(2)
+
+
 
     completed_menu_loop = True
     while completed_menu_loop:
@@ -176,7 +207,10 @@ def completedMenu():
 
             elif int(user_input) == 2:
                 addSeries()
+                dbConnect()
                 completed_menu_loop = False
+                addSeriesMenu()
+
 
             elif user_input.upper() == 'B':
                 mainMenu()
