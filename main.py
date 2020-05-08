@@ -1,6 +1,7 @@
 #! /usr/bin/python3
 
 import json, requests, pprint, os, time, math, webbrowser, re, pyautogui, urllib.request, pyperclip, pymongo
+from pymongo import MongoClient
 from tkinter import *
 from PIL import Image, ImageTk
 from jikanpy import Jikan
@@ -143,11 +144,10 @@ def mainMenu():
             time.sleep(2)
 
 def completedMenu():
+
     def viewSeries():
         print('Completed view')
 
-    def addSeries():
-        print('Add series that you have completed to this list for later playback')
 
 # Creat connection to our local mongoDB
     def dbConnect():
@@ -155,17 +155,30 @@ def completedMenu():
         try:
             client = pymongo.MongoClient("mongodb://localhost:27017/")
             db = client["Anime_DB"]
-            collection = db['completed']
-            print('connection successful')
+            return db
 
         except ConnectionError as error:
             print(error)
+
+    def addSeries(series_name):
+        db = dbConnect()
+        collection = db["completed"]
+        series = {'title': series_name}
+        for title in collection.find():
+
+            if title['title'] == series_name:
+                print('You have already entered this series')
+                addSeriesMenu()
+                break
+
+            else:
+                db_addition = collection.insert_one(series)
 
     def addSeriesMenu():
         add_series_loop = True
         while add_series_loop:
             clearScreen()
-            user_input = input(f'Please enter a series name to add to your "Watched List" ')
+            user_input = input(f'Please enter a series name to add to your "Watched List": ')
 
             if user_input.upper() == 'B':
                 completedMenu()
@@ -173,13 +186,15 @@ def completedMenu():
             else:
                 clearScreen()
                 print(f'You have entered "{user_input}" to add to your collection. Is this correct?')
-                user_input = input('[Y][N]->')
+                selection = input('[Y][N]->')
 
                 try:
-                    if user_input.upper() = 'Y':
+                    if selection.upper() == 'Y':
                         # Put this value into a dictionary so that it can be used by MongoDB
-                        collection.insert_one(user_input).inserted_id
-                    elif user_input = 'N':
+                        addSeries(user_input)
+                        add_series_loop = False
+
+                    elif user_input == 'N':
                         continue
                     else:
                         print('**************Invalid selection**************')
@@ -201,15 +216,13 @@ def completedMenu():
         user_input = input('->')
         try:
             if int(user_input) == 1:
-                viewSeries()
-                dbConnect()
+                # viewSeries()
+                # dbConnect()
                 completed_menu_loop = False
 
             elif int(user_input) == 2:
-                addSeries()
-                dbConnect()
-                completed_menu_loop = False
                 addSeriesMenu()
+                completed_menu_loop = False
 
 
             elif user_input.upper() == 'B':
@@ -298,44 +311,48 @@ def upcomingTitleSelect(titles, ranks, user_input):
     search_loop = True
     while search_loop:
 
-        try:
+            # Go back to main menu
+            if str(user_input).upper() == 'B':
+                mainMenu()
+                search_loop = False
 
-            for rank in ranks:
+            else:
 
-                if int(user_input) == rank:
-                    search_string = titles[rank-1]
-                    # If there's white space in the string then we're going to join the string using '%20' as the delimeter
-                    # Which is reddit's method of appending search string values
-                    if ' ' in search_string:
-                        search_array = search_string.split()
-                        reddit_search_token = '%20'.join(search_array)
-                        wikipedia_search_token = '_'.join(search_array)
-                        youtube_search_token = '+'.join(search_array)
-                        # Run three different searches for reddit, wikepedia, and Youtube. Absolutely overkill, but fuck it
-                        redditSearch(reddit_search_token)
-                        wikipediaSearch(wikipedia_search_token)
-                        youtubeSearch(youtube_search_token)
-                        print(f'searching for: {search_string}')
-                        search_loop = False
+                try:
 
-                    else:
-                        redditSearch(search_string)
-                        wikipediaSearch(search_string)
-                        youtubeSearch(search_string)
-                        print(f'searching for: {search_string}')
-                        search_loop = False
+                    for rank in ranks:
 
-                # Go back to main menu
-                elif str(user_input).upper() == 'B':
-                    mainMenu()
-                    search_loop = False
+                        if int(user_input) == rank:
+                            search_string = titles[rank-1]
+                            # If there's white space in the string then we're going to join the string using '%20' as the delimeter
+                            # Which is reddit's method of appending search string values
+                            if ' ' in search_string:
+                                search_array = search_string.split()
+                                reddit_search_token = '%20'.join(search_array)
+                                wikipedia_search_token = '_'.join(search_array)
+                                youtube_search_token = '+'.join(search_array)
+                                # Run three different searches for reddit, wikepedia, and Youtube. Absolutely overkill, but fuck it
+                                redditSearch(reddit_search_token)
+                                wikipediaSearch(wikipedia_search_token)
+                                youtubeSearch(youtube_search_token)
+                                print(f'searching for: {search_string}')
+                                search_loop = False
 
-        except ValueError:
-            search_loop = False
-            time.sleep(1)
-            print('**************Invalid selection**************')
-            time.sleep(5)
-            # upcomingMenu(titles, ranks, user_input)
+                            else:
+                                redditSearch(search_string)
+                                wikipediaSearch(search_string)
+                                youtubeSearch(search_string)
+                                print(f'searching for: {search_string}')
+                                search_loop = False
+
+                        else:
+                            continue
+
+                except ValueError:
+                    time.sleep(1)
+                    print('**************Invalid selection**************')
+                    time.sleep(5)
+                    # upcomingMenu(titles, ranks, user_input)
 
 # Function to generate the genre menu
 def genreMenu():
