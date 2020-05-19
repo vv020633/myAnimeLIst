@@ -1,28 +1,29 @@
 #! /usr/bin/python3
 
-import json, requests, pprint, os, time, math, webbrowser, re, pyautogui, urllib.request, pyperclip, pymongo
+import json, requests, pprint, os, time, math, webbrowser, re, urllib.request, pyperclip, pymongo
 from pymongo import MongoClient
 from tkinter import *
-from PIL import Image, ImageTk
 from jikanpy import Jikan
 from random import randint
 jikan = Jikan()
 
-# def animeOrManga(genre_id):
+
 
 # Function to clear the terminal
 def clearScreen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
+#Makes a request to the webpage and then returns the request code
+def pingSite(search_url):
+
+    print(urllib.request.urlopen(search_url).getcode())
+    code = urllib.request.urlopen(search_url).getcode()
+    return code
+
+
 #Function to search for an anime to stream
 def animeSearch(search_string):
 
-    #Makes a request to the webpage and then returns the request code
-    def pingSite(search_url):
-
-        print(urllib.request.urlopen(search_url).getcode())
-        code = urllib.request.urlopen(search_url).getcode()
-        return code
 
     # Function which  uses the request code and the search values to execute a search on gogoanime and to run a backup search if the main search fails
     def gogoAnimeSearch(res, search_alt, search_url):
@@ -34,7 +35,7 @@ def animeSearch(search_string):
             try:
                 webbrowser.open(f'https://www.gogoanime.io//search.html?keyword={search_alt}')
 
-            except HTTPError:
+            except HTTPError as error:
                 print('Unable to locate that title on a free streaming platform')
 
     #if there's a space in the search string, split and rejoin it using the hyphen which is gogoanime's delimeter for more than one value
@@ -67,6 +68,28 @@ def jsonToGenreMenu(genre_id):
     except ValueError:
         print('Expected an integer between one and two digits')
 
+def jsonToCollectionMenu(series_name):
+    try:
+        search_json = jikan.search('anime', series_name, parameters={'type': 'tv'})
+        for key,value in search_json.items():
+            if key == 'results':
+                results = value
+                result = results[0]
+
+        for key,value in result.items():
+            if key == 'episodes':
+                if value == 0:
+                    print('This seems to be an ongoing series')
+
+                else:
+                    return value
+
+        
+   
+    except ConnectionError:
+        print('Could not connect to the MAL API at: https://api.jikan.moe/v3')
+
+
 # Loops through the retrieved Json values and pulls the 'top' dictionary item from the dictionary which contains a list of animes as it's value
 def jsonToUpcomingMenu():
     try:
@@ -82,6 +105,7 @@ def jsonToUpcomingMenu():
     for key,value  in top_anime.items():
          if key ==  'top':
             animes_data = value
+
 
 # Loops through thelist items in the anime data list within
     for data in animes_data:
@@ -110,7 +134,7 @@ def mainMenu():
         clearScreen()
         print('[1]View Top Upcoming Anime.'.center(20) + '\n ' )
         print('[2]Select Random Anime To Watch.'.center(20) + '\n ' )
-        print('[3]Completed Series')
+        print('[3]Collection')
 #If the user's input isn't an integer then it raises an exception
         menu_option = input('->')
         try:
@@ -149,34 +173,77 @@ def completedMenu():
         print('Completed view')
 
 
-# Creat connection to our local mongoDB
+# Create connection to our local mongoDB
     def dbConnect():
         # Add fail safe to skip over this try catch if the connection is already in place
         try:
             client = pymongo.MongoClient("mongodb://localhost:27017/")
             db = client["Anime_DB"]
-            return db
+            collection = db["completed"] 
+            return db, collection
 
         except ConnectionError as error:
             print(error)
-
+#Add a series to our list of completed series 
     def addSeries(series_name):
-        db = dbConnect()
-        collection = db["completed"]
-        series = {'title': series_name}
-        for title in collection.find():
+        db, collection = dbConnect()
+        if collection.find_one({'title': series_name}) != None:
+            print('You have already added this item to your collection')
+            time.sleep(3)
+            addSeriesMenu()
+        else:
+            series = {'title': series_name}
+            db_addition = collection.insert_one(series)
+            print('Inserting value: ' + str(db_addition))
 
-            if title['title'] == series_name:
-                print('You have already entered this series')
-                addSeriesMenu()
-                break
+    def viewSeries():
 
-            else:
-                db_addition = collection.insert_one(series)
+        clearScreen()
+        db, collection = dbConnect()
+        #Print the titles of the series in our completed collection. Exclude the id.
+        for series in collection.find():
+            print('-' + series['title'] + '\n')
+        print('\n' + '\n' + 'Choose one of the series above (input series name), I will then randomly select an episode.')
+        print('\n' + 'Press [B] to go back')
+        user_input = input('->')
+        selectRandEpisode(user_input.lower())
+
+    def selectRandEpisode(user_input):
+
+        def gogoAnimeSearch(res, search_url):
+            try:
+             if res == 200:
+                webbrowser.open(search_url)
+
+
+            except HTTPError as error:
+                print('Unable to locate that title on a free streaming platform')
+
+
+
+        total_episodes = jsonToCollectionMenu(user_input)
+        print(total_episodes)
+        episode_number = randint(1,total_episodes)
+        if ' ' in  user_input:
+            search_array = user_input.split()
+            gogoanime_search_token = '-'.join(search_array)
+            search_url = f'https://www.gogoanime.io/{gogoanime_search_token}-episode-{episode_number}'
+            response = pingSite(search_url)
+            gogoAnimeSearch(response, search_url)
+        
+        else:
+            gogoanime_search_token = user_input
+            search_url = f'https://www.gogoanime.io/{gogoanime_search_token}-episode-{episode_number}'
+            response = pingSite(search_url)
+            gogoAnimeSearch(response, search_url)
+        
+
+
 
     def addSeriesMenu():
-        add_series_loop = True
-        while add_series_loop:
+        clearScreen()
+        add_series_menu_loop = True
+        while add_series_menu_loop:
             clearScreen()
             user_input = input(f'Please enter a series name to add to your "Watched List": ')
 
@@ -192,7 +259,7 @@ def completedMenu():
                     if selection.upper() == 'Y':
                         # Put this value into a dictionary so that it can be used by MongoDB
                         addSeries(user_input)
-                        add_series_loop = False
+                        add_series_menu_loop = False
 
                     elif user_input == 'N':
                         continue
@@ -216,8 +283,7 @@ def completedMenu():
         user_input = input('->')
         try:
             if int(user_input) == 1:
-                # viewSeries()
-                # dbConnect()
+                viewSeries()
                 completed_menu_loop = False
 
             elif int(user_input) == 2:
