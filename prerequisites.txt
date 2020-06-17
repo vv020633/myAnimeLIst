@@ -1,3 +1,4 @@
 ******Packages to install******
 -PyMongo, the Python Driver - pip3 install pymongo
 -Jikanpy - PYthon wrapper for jikan.moe API - pip3 install jikanpy
+urllib3 - pip3 install urllib3

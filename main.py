@@ -1,6 +1,6 @@
 #! /usr/bin/python3
 
-import json, requests, pprint, os, time, math, webbrowser, re, urllib.request, pyperclip, pymongo
+import json, requests, pprint, os, time, math, webbrowser, re, urllib.request, pyperclip, pymongo, urllib3
 from pymongo import MongoClient
 from tkinter import *
 from jikanpy import Jikan
@@ -60,6 +60,7 @@ def jsonToGenreMenu(genre_id):
     try:
         # Grabbing the top upcoming anime from the MAL API
         anime_genre = jikan.genre(type='anime', genre_id=genre_id)
+
         return anime_genre
 
     except ConnectionError:
@@ -67,7 +68,8 @@ def jsonToGenreMenu(genre_id):
 
     except ValueError:
         print('Expected an integer between one and two digits')
-
+    
+   
 def jsonToCollectionMenu(series_name):
     try:
         search_json = jikan.search('anime', series_name, parameters={'type': 'tv'})
@@ -127,45 +129,43 @@ def jsonToUpcomingMenu():
 
 #Initates the main menu
 def mainMenu():
+    def viewTopUpcoming():
+        titles, ranks, start_dates = jsonToUpcomingMenu()
+        upcomingMenu(titles, ranks, start_dates)
+#Selects the menu to direct the user towards based on their input. It will return an error message if the choice is erroneous
+    def menuSelect(input):
+        menu = {
+            1: viewTopUpcoming,
+            2: randMenu,
+            3: completedMenu
+        }
+        try:
+            func=menu.get(int(input), 'Invalid Selection')
+            return func()
+        # except ValueError as error:
+        #     print(error)
+        #     print('wrong')
+        #     return False
+        except TypeError as error:
+            print(error)
+            return False
 
     main_loop = True
     while main_loop:
-        #Clear terminal command for Windows, Unix and MAC
         clearScreen()
         print('[1]View Top Upcoming Anime.'.center(20) + '\n ' )
         print('[2]Select Random Anime To Watch.'.center(20) + '\n ' )
         print('[3]Collection')
-#If the user's input isn't an integer then it raises an exception
         menu_option = input('->')
-        try:
-            #Upcoming Menu Selection
-            if int(menu_option) == 1:
+        menuSelect(menu_option)
+       
+        if menuSelect == False:
+            continue
+        time.sleep(2)
+       
+        
 
-                titles, ranks, start_dates = jsonToUpcomingMenu()
-                upcomingMenu(titles, ranks, start_dates)
-                main_loop = False
-
-            #Genre Menu Selection
-            elif int(menu_option) == 2:
-                randMenu()
-                main_loop = False
-
-            elif int(menu_option) == 3:
-                completedMenu()
-                main_loop = False
-
-            else:
-                time.sleep(1)
-                print('**************Invalid selection**************')
-                time.sleep(1)
-                continue
-
-        except ValueError as error:
-            print('**************Invalid selection**************')
-            time.sleep(.2)
-            print(error)
-            print("Please enter a valid option...")
-            time.sleep(2)
+ 
 
 def completedMenu():
 
@@ -295,52 +295,48 @@ def completedMenu():
                 mainMenu()
                 completed_menu_loop = False
 
-            else:
-                time.sleep(1)
-                print('**************Invalid selection**************')
-                time.sleep(1)
-                continue
-
         except ValueError as error:
-            print('**************Invalid selection**************')
-            time.sleep(.2)
-            print(error)
-            time.sleep(2)
+            if user_input.upper() == 'B':
+                mainMenu()
+                completed_menu_loop = False
+            else:
+                print('**************Invalid selection**************')
+                time.sleep(.2)
+                print(error)
+                time.sleep(2)
 
 #Menu used to randomly select a show
 def randMenu():
+    def menuSelect(input):
+        menu = {
+            1: genreMenu
+            
+        }
+        if input.upper() == 'B':
+            mainMenu()
+        else:
+            try:
+                func=menu.get(int(input), 'Invalid Selection')
+                return func()
+            except ValueError as error:
+                print(error)
+                return False
+            except TypeError as error:
+                print(error)
+                return False
 
     rand_menu_loop = True
 
     while rand_menu_loop:
         clearScreen()
+        print('**************Randomly Select a Title**************' + '\n')
         print('How would you like to randomly select an anime?')
         print('[1] Genre')
         print('\n' + '\n' + "Press [B] to go back")
         user_input = input('->')
-
-        try:
-
-            #Back to main menu
-            if user_input.upper() == 'B':
-                mainMenu()
-                rand_menu_loop = False
-                #Navigate to genre menu
-            elif int(user_input) == 1:
-                    genreMenu()
-                    rand_menu_loop = False
-            else :
-                print('Please enter a valid option')
-                time.sleep(3)
-                continue
-        except ValueError as error:
-            print(error)
-            print('**************Invalid selection**************')
-            time.sleep(1)
-            print('Input a valid selection')
-            time.sleep(1)
-            rand_menu_loop = False
-            randMenu()
+        menuSelect(user_input)
+        if menuSelect == False:
+            continue
 
 
 # Selects one of the upcoming anime titles
@@ -378,46 +374,44 @@ def upcomingTitleSelect(titles, ranks, user_input):
     while search_loop:
 
             # Go back to main menu
+           
+
+        try:
+            for rank in ranks:
+              if int(user_input) == rank:
+                search_string = titles[rank-1]
+                  # If there's white space in the string then we're going to join the string using '%20' as the delimeter
+                    # Which is reddit's method of appending search string values
+                if ' ' in search_string:
+                    search_array = search_string.split()
+                    reddit_search_token = '%20'.join(search_array)
+                    wikipedia_search_token = '_'.join(search_array)
+                    youtube_search_token = '+'.join(search_array)
+                        # Run three different searches for reddit, wikepedia, and Youtube. Absolutely overkill, but fuck it
+                    redditSearch(reddit_search_token)
+                    wikipediaSearch(wikipedia_search_token)
+                    youtubeSearch(youtube_search_token)
+                    print(f'searching for: {search_string}')
+                    search_loop = False
+
+                else:
+                    redditSearch(search_string)
+                        
+                    wikipediaSearch(search_string)
+                    youtubeSearch(search_string)
+                    print(f'searching for: {search_string}')
+                    search_loop = False
+
+                
+                    
+        except ValueError:
             if str(user_input).upper() == 'B':
                 mainMenu()
                 search_loop = False
-
             else:
-
-                try:
-
-                    for rank in ranks:
-
-                        if int(user_input) == rank:
-                            search_string = titles[rank-1]
-                            # If there's white space in the string then we're going to join the string using '%20' as the delimeter
-                            # Which is reddit's method of appending search string values
-                            if ' ' in search_string:
-                                search_array = search_string.split()
-                                reddit_search_token = '%20'.join(search_array)
-                                wikipedia_search_token = '_'.join(search_array)
-                                youtube_search_token = '+'.join(search_array)
-                                # Run three different searches for reddit, wikepedia, and Youtube. Absolutely overkill, but fuck it
-                                redditSearch(reddit_search_token)
-                                wikipediaSearch(wikipedia_search_token)
-                                youtubeSearch(youtube_search_token)
-                                print(f'searching for: {search_string}')
-                                search_loop = False
-
-                            else:
-                                redditSearch(search_string)
-                                wikipediaSearch(search_string)
-                                youtubeSearch(search_string)
-                                print(f'searching for: {search_string}')
-                                search_loop = False
-
-                        else:
-                            continue
-
-                except ValueError:
-                    time.sleep(1)
-                    print('**************Invalid selection**************')
-                    time.sleep(5)
+                time.sleep(1)
+                print('**************Invalid selection**************')
+                time.sleep(5)
                     # upcomingMenu(titles, ranks, user_input)
 
 # Function to generate the genre menu
@@ -500,12 +494,13 @@ def genreMenu():
 
                 # If we get a good response, proceed to the site
                     if response == 200:
-                        webbrowser.Open(search_string)
-                        rand_select_loop = False
+                        try:
+                            webbrowser.Open(search_string)
+                            rand_select_loop = False
 
-                    else:
-                        print('Sorry for the inconvenience. I am unable to complete your query at this time')
-                        rand_select_loop = False
+                        except:
+                            print('Sorry for the inconvenience. I am unable to complete your query at this time')
+                        
                 elif user_input.upper() == 'N':
                     continue
 
