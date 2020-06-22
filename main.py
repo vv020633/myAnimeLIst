@@ -1,6 +1,6 @@
 #! /usr/bin/python3
 
-import json, requests, pprint, os, time, math, webbrowser, re, urllib.request, pyperclip, pymongo, urllib3
+import json, requests, pprint, os, time, math, webbrowser, re, urllib.request, pyperclip, pymongo, urllib3, datetime
 from pymongo import MongoClient
 from tkinter import *
 from jikanpy import Jikan
@@ -65,10 +65,26 @@ def jsonToGenreMenu(genre_id):
 
     except ConnectionError:
         print('Could not connect to the MAL API at: https://api.jikan.moe/v3')
+        time.sleep(5)
+        mainMenu()
 
     except ValueError:
         print('Expected an integer between one and two digits')
-    
+        time.sleep(5)
+        mainMenu()
+def jsonToYearMenu(year):
+    try:
+        year_spring_anime = jikan.season(year=int(year), season='spring')
+        year_summer_anime = jikan.season(year=int(year), season='summer')
+        year_fall_anime = jikan.season(year=int(year), season='fall')
+        year_winter_anime = jikan.season(year=int(year), season='winter')
+        one_year_anime = year_spring_anime['anime'] + year_summer_anime['anime'] + year_fall_anime['anime'] + year_winter_anime['anime']
+        return one_year_anime
+    except ConnectionError:
+        print('Could not connect to the MAL API at: https://api.jikan.moe/v3')
+        time.sleep(5)
+        mainMenu()
+
    
 def jsonToCollectionMenu(series_name):
     try:
@@ -87,9 +103,11 @@ def jsonToCollectionMenu(series_name):
                     return value
 
         
-   
     except ConnectionError:
         print('Could not connect to the MAL API at: https://api.jikan.moe/v3')
+        time.sleep(5)
+        mainMenu()
+
 
 
 # Loops through the retrieved Json values and pulls the 'top' dictionary item from the dictionary which contains a list of animes as it's value
@@ -100,6 +118,8 @@ def jsonToUpcomingMenu():
 
     except ConnectionError:
         print('Could not connect to the MAL API at: https://api.jikan.moe/v3')
+        time.sleep(5)
+        mainMenu()
 
     titles = []
     ranks = []
@@ -168,9 +188,6 @@ def mainMenu():
  
 
 def completedMenu():
-
-    def viewSeries():
-        print('Completed view')
 
 
 # Create connection to our local mongoDB
@@ -309,7 +326,8 @@ def completedMenu():
 def randMenu():
     def menuSelect(input):
         menu = {
-            1: genreMenu
+            1: genreMenu,
+            2: yearMenu
             
         }
         if input.upper() == 'B':
@@ -320,24 +338,23 @@ def randMenu():
                 return func()
             except ValueError as error:
                 print(error)
-                return False
+                time.sleep(2)
+                randMenu()
             except TypeError as error:
                 print(error)
-                return False
+                time.sleep(2)
+                randMenu()
 
-    rand_menu_loop = True
-
-    while rand_menu_loop:
-        clearScreen()
-        print('**************Randomly Select a Title**************' + '\n')
-        print('How would you like to randomly select an anime?')
-        print('[1] Genre')
-        print('\n' + '\n' + "Press [B] to go back")
-        user_input = input('->')
-        menuSelect(user_input)
-        if menuSelect == False:
-            continue
-
+    
+    clearScreen()
+    print('**************Randomly Select a Title**************' + '\n')
+    print('How would you like to randomly select an anime?')
+    print('[1] Genre')
+    print('[2] Year')
+    print('\n' + '\n' + "Press [B] to go back")
+    user_input = input('->')
+    menuSelect(user_input)
+      
 
 # Selects one of the upcoming anime titles
 def upcomingTitleSelect(titles, ranks, user_input):
@@ -495,7 +512,7 @@ def genreMenu():
                 # If we get a good response, proceed to the site
                     if response == 200:
                         try:
-                            webbrowser.Open(search_string)
+                            webbrowser.open(search_string)
                             rand_select_loop = False
 
                         except:
@@ -527,6 +544,111 @@ def genreMenu():
     printGenreMenu()
     genre_json = chooseGenre()
     findGenre(genre_json)
+
+#Function to generate the year menu  to allow us to choose a title based on the year it was released                
+def yearMenu():
+
+    now = datetime.datetime.now()
+    current_year = now.year
+    
+    #Print the year menu
+    def printYearMenu():
+        clearScreen()
+        print('Input a year upwards of 1926 to find series based in that year')
+        user_input=input('->')
+       
+        try:
+            #If the user input is within the year range that we specified, then we'll grab the data from the jikan API
+            if int(user_input) >= 1926 and int(user_input) <= current_year:
+                rand_title = jsonToYearMenu(user_input)
+                return rand_title
+            else:
+                print('Please enter a year(digit format y-y-y-y) after 1926 and before ' + str(current_year))
+                time.sleep(5)
+                yearMenu()
+
+        except ValueError as error:
+            if user_input.upper()=='B':
+                randMenu()
+            else:
+                print(error)
+                time.sleep(2)
+                yearMenu()
+    #Chooses a random anime based on the year
+    def randAnime(anime_collection):
+        
+        
+        try:
+            #Titles that have already been selected
+            title_trash=[]
+            #Total titles retrieved
+            title_count=0
+            menu_loop = True
+
+            for title in anime_collection:
+                title_count+=1
+
+            while menu_loop:
+                #If the contents of our trash collection match the length of our retrieved title count, then we can assume that the user has cycled through all of the shows in that period
+                if len(title_trash) == title_count:
+                    print('There are no other anime within this period... exiting')
+                    time.sleep(5)
+                    menu_loop = False
+                    yearMenu()
+
+                else:
+                    clearScreen()
+                    #Random number between 0 and the number of anime returned in the collection
+                    random_selection = randint(0, len(anime_collection)-1)
+                    #Random anime selected 
+                    random_show = anime_collection[random_selection]
+                    #Filter our show down to just these relevant key value pairs
+                    distinct_random_show = dict((key, random_show[key]) for key in  ['title', 'type', 'synopsis', 'score'] if key in random_show)
+                    if distinct_random_show in title_trash:
+                        continue
+                    else:
+
+                        pprint.pprint(distinct_random_show)
+                        print('\n')
+                        print('Would you like to search for ' + distinct_random_show['title'] +  '[Y/N]?')
+                        print('Enter [B] to go back')
+                        user_input = input('->')
+
+                        try:
+
+                            if user_input.upper() == 'B':
+                                menu_loop = False
+                                randMenu()
+
+                            elif user_input.upper() == 'Y':
+                                menu_loop = False
+                                animeSearch(distinct_random_show['title'])
+            
+                            elif user_input.upper() == 'N':
+                                #Random number between 0 and the number of anime returned in the collection
+                                random_selection = randint(0, len(anime_collection))
+                                #Append the used title to the trash heap so we don't re-use that title
+                                title_trash.append(distinct_random_show['title'])
+                                continue
+
+                            else:
+                                continue
+                            
+                        except ValueError:
+                            print('Please enter a valid value')
+          
+        except TypeError:
+            print('No titles found matching this criteria. Please try again')
+            time.sleep(5)
+            yearMenu()
+    
+        except ValueError:
+            print('No titles found matching this criteria. Please try again')
+            time.sleep(5)
+            yearMenu()
+
+    randAnime(printYearMenu())
+    
 
 def upcomingMenu(titles, ranks, start_dates):
 # assigns the max width of the columns for each value
