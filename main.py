@@ -1,10 +1,11 @@
 #! /usr/bin/python3
 
-import json, requests, pprint, os, time, math, webbrowser, re, urllib.request, pyperclip, pymongo, urllib3, datetime
+import json, requests, pprint, os, time, math, webbrowser, re, urllib.request, pyperclip, pymongo, urllib3, datetime, json
 from pymongo import MongoClient
-from tkinter import *
 from jikanpy import Jikan
+from bs4 import BeautifulSoup
 from random import randint
+
 jikan = Jikan()
 
 
@@ -13,6 +14,57 @@ jikan = Jikan()
 def clearScreen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
+#Function to count the number of episodes in an ongoing series
+# This can be optimised using algorithms
+def episodeCount(user_input):
+    
+    if ' ' in  user_input:
+            search_array = user_input.split()
+            gogoanime_search_token = '-'.join(search_array)
+            search_url = f'https://www.gogoanime.io/{gogoanime_search_token}-episode-'
+            
+        
+    else:
+            gogoanime_search_token = user_input
+            search_url = f'https://www.gogoanime.io/{gogoanime_search_token}-episode-'
+        
+
+    url = f'https://www19.gogoanime.io/category/{gogoanime_search_token}'
+    request = requests.get(url)
+    src = request.content
+    soup = BeautifulSoup(src, 'lxml')
+    links = soup.find(class_= "active")
+    newest_episodes_range = str(links.text)
+    newest_episodes_value = newest_episodes_range.split('-')
+    episode_count = newest_episodes_value[1]
+    return episode_count
+
+
+def createSearchURL(search_string ):
+    #if there's a space in the search string, split and rejoin it using the hyphen which is gogoanime's delimeter for more than one value
+    if ' ' in search_string:
+        search_array = search_string.split()
+        gogoanime_search_token = '-'.join(search_array)
+        search_url = f'https://www.gogoanime.io/category/{gogoanime_search_token}'
+        res = pingSite(search_url)
+        if res == 200:
+            return search_url
+        
+        else:
+            #Search by the first value in the list if the rest of the list comes up short
+            search_alt = search_array[0]
+            res = pingSite(search_alt)
+            if res == 200:
+                return search_alt
+            
+            else:
+                print('I cannot seem to connect to the webpage specified')
+                time.sleep(3)
+
+    else:
+        search_url = f'https://www.gogoanime.io/category/{search_string}'
+    # Use the code from the gogoAnimesearch function to create this function
+        
 #Makes a request to the webpage and then returns the request code
 def pingSite(search_url):
 
@@ -72,6 +124,8 @@ def jsonToGenreMenu(genre_id):
         print('Expected an integer between one and two digits')
         time.sleep(5)
         mainMenu()
+
+# Re-work this function to utilize the jikan.season_archive API call and cycle through the results               
 def jsonToYearMenu(year):
     try:
         year_spring_anime = jikan.season(year=int(year), season='spring')
@@ -85,24 +139,30 @@ def jsonToYearMenu(year):
         time.sleep(5)
         mainMenu()
 
-   
+   #Retrieves the json to pass into the collection menu
 def jsonToCollectionMenu(series_name):
     try:
+        #search for the tv series
         search_json = jikan.search('anime', series_name, parameters={'type': 'tv'})
+        #Given the json that is returned, if there is an exact match for the series name, then we'll try to get the episode number count
         for key,value in search_json.items():
             if key == 'results':
                 results = value
-                result = results[0]
+                for result in results:
+                    if result['title'].lower() == series_name:
+                        try:
+                            total_episodes = result['episodes']
+                            if total_episodes == 0:
+                                total_episodes = episodeCount(series_name)
+                                return total_episodes
+                            else:
+                                return total_episodes
+                        except:
+                            time.sleep(5)
+                            total_episodes = episodeCount(series_name)
+                            return total_episodes
 
-        for key,value in result.items():
-            if key == 'episodes':
-                if value == 0:
-                    print('This seems to be an ongoing series')
 
-                else:
-                    return value
-
-        
     except ConnectionError:
         print('Could not connect to the MAL API at: https://api.jikan.moe/v3')
         time.sleep(5)
@@ -129,30 +189,31 @@ def jsonToUpcomingMenu():
             animes_data = value
 
 
-# Loops through thelist items in the anime data list within
+    # Loops through thelist items in the anime data list within
     for data in animes_data:
         for key, value in data.items():
 
-# If the key matches the values that we want (rank, title, start_dates) then we'll grab those values
+    # If the key matches the values that we want (rank, title, start_dates) then we'll grab those values
             if key == 'rank':
                 ranks.append(value)
             elif key == 'title':
                 titles.append(value)
             elif key == 'start_date':
                 start_dates.append(value)
-# Some values arrived as NoneTypes so this is there to remedy that
+    # Some values arrived as NoneTypes so this is there to remedy that
                 for date in range(0,len(start_dates)):
                     if start_dates[date] is None:
                         start_dates[date] = '-'
-#returns titles, ranks, and start dates
+    #returns titles, ranks, and start dates
     return titles, ranks, start_dates
+
 
 #Initates the main menu
 def mainMenu():
     def viewTopUpcoming():
         titles, ranks, start_dates = jsonToUpcomingMenu()
         upcomingMenu(titles, ranks, start_dates)
-#Selects the menu to direct the user towards based on their input. It will return an error message if the choice is erroneous
+    #Selects the menu to direct the user towards based on their input. It will return an error message if the choice is erroneous
     def menuSelect(input):
         menu = {
             1: viewTopUpcoming,
@@ -190,7 +251,7 @@ def mainMenu():
 def completedMenu():
 
 
-# Create connection to our local mongoDB
+    # Create connection to our local mongoDB
     def dbConnect():
         # Add fail safe to skip over this try catch if the connection is already in place
         try:
@@ -201,7 +262,7 @@ def completedMenu():
 
         except ConnectionError as error:
             print(error)
-#Add a series to our list of completed series 
+    #Add a series to our list of completed series 
     def addSeries(series_name):
         db, collection = dbConnect()
         if collection.find_one({'title': series_name}) != None:
@@ -229,30 +290,34 @@ def completedMenu():
 
         def gogoAnimeSearch(res, search_url):
             try:
-             if res == 200:
+            
                 webbrowser.open(search_url)
 
-
-            except HTTPError as error:
+            except ConnectionError as error:
                 print('Unable to locate that title on a free streaming platform')
+                print(error)
 
 
 
         total_episodes = jsonToCollectionMenu(user_input)
-        print(total_episodes)
-        episode_number = randint(1,total_episodes)
-        if ' ' in  user_input:
-            search_array = user_input.split()
-            gogoanime_search_token = '-'.join(search_array)
-            search_url = f'https://www.gogoanime.io/{gogoanime_search_token}-episode-{episode_number}'
-            response = pingSite(search_url)
-            gogoAnimeSearch(response, search_url)
-        
-        else:
-            gogoanime_search_token = user_input
-            search_url = f'https://www.gogoanime.io/{gogoanime_search_token}-episode-{episode_number}'
-            response = pingSite(search_url)
-            gogoAnimeSearch(response, search_url)
+        episode_number = randint(1,int(total_episodes))
+        try:
+            if ' ' in  user_input:
+                search_array = user_input.split()
+                gogoanime_search_token = '-'.join(search_array)
+                search_url = f'https://www.gogoanime.io/{gogoanime_search_token}-episode-{episode_number}'
+                response = pingSite(search_url)
+                gogoAnimeSearch(response, search_url)
+
+            else:
+                gogoanime_search_token = user_input
+                search_url = f'https://www.gogoanime.io/{gogoanime_search_token}-episode-{episode_number}'
+                response = pingSite(search_url)
+                gogoAnimeSearch(response, search_url)
+        except ValueError as error:
+            print(error)
+            time.sleep(3)
+            completedMenu()
         
 
 
@@ -287,8 +352,7 @@ def completedMenu():
                     time.sleep(.2)
                     print(error)
                     time.sleep(2)
-
-
+    
 
     completed_menu_loop = True
     while completed_menu_loop:
@@ -307,20 +371,15 @@ def completedMenu():
                 addSeriesMenu()
                 completed_menu_loop = False
 
-
-            elif user_input.upper() == 'B':
-                mainMenu()
-                completed_menu_loop = False
-
         except ValueError as error:
             if user_input.upper() == 'B':
                 mainMenu()
                 completed_menu_loop = False
+
             else:
                 print('**************Invalid selection**************')
-                time.sleep(.2)
-                print(error)
-                time.sleep(2)
+                time.sleep(5)
+                completedMenu()
 
 #Menu used to randomly select a show
 def randMenu():
@@ -545,7 +604,7 @@ def genreMenu():
     genre_json = chooseGenre()
     findGenre(genre_json)
 
-#Function to generate the year menu  to allow us to choose a title based on the year it was released                
+#Function to generate the year menu  to allow us to choose a title based on the year it was released
 def yearMenu():
 
     now = datetime.datetime.now()
@@ -648,10 +707,10 @@ def yearMenu():
             yearMenu()
 
     randAnime(printYearMenu())
-    
+        
 
 def upcomingMenu(titles, ranks, start_dates):
-# assigns the max width of the columns for each value
+    # assigns the max width of the columns for each value
     max_length_titles = max(titles, key = len)
     max_length_ranks = 2
     max_length_start_dates = max(start_dates, key = len)
@@ -659,11 +718,11 @@ def upcomingMenu(titles, ranks, start_dates):
     max_titles_col_length = len(max_length_titles)
     max_ranks_col_length = max_length_ranks
     max_start_dates_col_length = len(max_length_start_dates)
-# Column title fields
+    # Column title fields
     print('Rank'.ljust(max_ranks_col_length, '-')  + 'Title'.center(max_titles_col_length, ' ') +  'Start Date'.rjust(max_start_dates_col_length, ' ') + '\n')
 
     for count in range(0,20):
-# Prints the values of the top Upcoming anime
+    # Prints the values of the top Upcoming anime
         print(str(ranks[count]).center(10, ' ') + '''[''' + str(titles[count]).center(70, '+') + ''']'''  + str(start_dates[count]).rjust(20, ' ') + '\n' + '\n')
 
     time.sleep(.2)
