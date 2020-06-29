@@ -1,6 +1,6 @@
 #! /usr/bin/python3
 
-import json, requests, pprint, os, time, math, webbrowser, re, urllib.request, pyperclip, pymongo, urllib3, datetime, json
+import json, requests, pprint, os, time, math, webbrowser, re, urllib.request, pyperclip, pymongo, urllib3, datetime
 from pymongo import MongoClient
 from jikanpy import Jikan
 from bs4 import BeautifulSoup
@@ -105,8 +105,8 @@ def animeSearch(search_string):
         search_alt = search_array[0]
         gogoAnimeSearch(response, search_alt, search_url)
 
-#Checks the user's input and confirms that it matches a value stored in the API request and pulls the corresponding genre's json data
-def jsonToGenreMenu(genre_id):
+#Checks the user's input and confirms that it matches a value stored in the API request and pulls the corresponding genre's Jikan data
+def jikanToGenreMenu(genre_id):
 
     genre_id = int(genre_id)
     try:
@@ -126,7 +126,7 @@ def jsonToGenreMenu(genre_id):
         mainMenu()
 
 # Re-work this function to utilize the jikan.season_archive API call and cycle through the results               
-def jsonToYearMenu(year):
+def jikanToYearMenu(year):
     try:
         year_spring_anime = jikan.season(year=int(year), season='spring')
         year_summer_anime = jikan.season(year=int(year), season='summer')
@@ -139,13 +139,13 @@ def jsonToYearMenu(year):
         time.sleep(5)
         mainMenu()
 
-   #Retrieves the json to pass into the collection menu
-def jsonToCollectionMenu(series_name):
+   #Retrieves the Jikan to pass into the collection menu
+def jikanToCollectionMenu(series_name):
     try:
         #search for the tv series
-        search_json = jikan.search('anime', series_name, parameters={'type': 'tv'})
-        #Given the json that is returned, if there is an exact match for the series name, then we'll try to get the episode number count
-        for key,value in search_json.items():
+        search_jikan = jikan.search('anime', series_name, parameters={'type': 'tv'})
+        #Given the Jikan that is returned, if there is an exact match for the series name, then we'll try to get the episode number count
+        for key,value in search_jikan.items():
             if key == 'results':
                 results = value
                 for result in results:
@@ -170,8 +170,8 @@ def jsonToCollectionMenu(series_name):
 
 
 
-# Loops through the retrieved Json values and pulls the 'top' dictionary item from the dictionary which contains a list of animes as it's value
-def jsonToUpcomingMenu():
+# Loops through the retrieved jikan values and pulls the 'top' dictionary item from the dictionary which contains a list of animes as it's value
+def jikanToUpcomingMenu():
     try:
         # Grabbing the top upcoming anime from the MAL API
         top_anime = jikan.top(type='anime', page=1, subtype='upcoming')
@@ -211,7 +211,7 @@ def jsonToUpcomingMenu():
 #Initates the main menu
 def mainMenu():
     def viewTopUpcoming():
-        titles, ranks, start_dates = jsonToUpcomingMenu()
+        titles, ranks, start_dates = jikanToUpcomingMenu()
         upcomingMenu(titles, ranks, start_dates)
     #Selects the menu to direct the user towards based on their input. It will return an error message if the choice is erroneous
     def menuSelect(input):
@@ -223,10 +223,6 @@ def mainMenu():
         try:
             func=menu.get(int(input), 'Invalid Selection')
             return func()
-        # except ValueError as error:
-        #     print(error)
-        #     print('wrong')
-        #     return False
         except TypeError as error:
             print(error)
             return False
@@ -253,7 +249,6 @@ def completedMenu():
 
     # Create connection to our local mongoDB
     def dbConnect():
-        # Add fail safe to skip over this try catch if the connection is already in place
         try:
             client = pymongo.MongoClient("mongodb://localhost:27017/")
             db = client["Anime_DB"]
@@ -299,7 +294,7 @@ def completedMenu():
 
 
 
-        total_episodes = jsonToCollectionMenu(user_input)
+        total_episodes = jikanToCollectionMenu(user_input)
         episode_number = randint(1,int(total_episodes))
         try:
             if ' ' in  user_input:
@@ -522,11 +517,11 @@ def genreMenu():
             #Loops through the genre dictionary for a match in the user's selection
             for number, genre in genre_dict.items():
                 try:
-                #Return the JSON data of the anime genre
+                #Return the jikan data of the anime genre
                     if user_input == number:
-                        #jsonToGenreMenu ensures that the user's selection is a valid option in the JSON genre option
-                        genre_json= jsonToGenreMenu(user_input)
-                        return genre_json
+                        #jikanToGenreMenu ensures that the user's selection is a valid option in the jikan genre option
+                        genre_jikan= jikanToGenreMenu(user_input)
+                        return genre_jikan
                         genre_loop = False
 
                     elif user_input.upper() == 'B':
@@ -601,8 +596,8 @@ def genreMenu():
                 continue
 
     printGenreMenu()
-    genre_json = chooseGenre()
-    findGenre(genre_json)
+    genre_jikan = chooseGenre()
+    findGenre(genre_jikan)
 
 #Function to generate the year menu  to allow us to choose a title based on the year it was released
 def yearMenu():
@@ -619,7 +614,7 @@ def yearMenu():
         try:
             #If the user input is within the year range that we specified, then we'll grab the data from the jikan API
             if int(user_input) >= 1926 and int(user_input) <= current_year:
-                rand_title = jsonToYearMenu(user_input)
+                rand_title = jikanToYearMenu(user_input)
                 return rand_title
             else:
                 print('Please enter a year(digit format y-y-y-y) after 1926 and before ' + str(current_year))
